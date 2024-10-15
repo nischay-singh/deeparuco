@@ -49,12 +49,18 @@ if __name__ == "__main__":
 
     # Load models
 
-    detector = YOLO(f"{model_dir}/{args.detector}.pt")
+    detector_model = f"{model_dir}/{args.detector}.pt"
+    regressor_model = f"{model_dir}/{args.regressor}.h5"
+    decoder_model = f"{model_dir}/dec_new.h5"
+
+    detector = YOLO(detector_model)
     regressor = load_model(
-        f"{model_dir}/{args.regressor}.h5",
+        regressor_model,
         custom_objects={"weighted_loss": weighted_loss},
     )
-    decoder = load_model(f"{model_dir}/dec_new.h5")
+    decoder = load_model(decoder_model)
+
+    print(detector_model, regressor_model, decoder_model)
 
     # Use graph execution for tf models
 
@@ -74,7 +80,7 @@ if __name__ == "__main__":
 
     detections = detector(pic, verbose=False, iou=0.5, conf=0.03)[0].cpu().boxes
 
-    # Expanded bboxes
+    # Expanded boxes
 
     xyxy = [
         [
@@ -98,7 +104,7 @@ if __name__ == "__main__":
 
     if args.get_crops:
         for i in range(len(crops_ori)):
-            cv2.imwrite(f"crop_{i}.png", crops_ori[i])
+            cv2.imwrite(f"crops/crop_{i}.png", crops_ori[i])
 
     # Normalize (if not baseline!)
 
@@ -118,7 +124,7 @@ if __name__ == "__main__":
 
         if args.get_heatmaps:
             for i in range(corners.shape[0]):
-                cv2.imwrite(f"map_{i}.png", norm(corners[i]) * 255)
+                cv2.imwrite(f"maps/map_{i}.png", norm(corners[i]) * 255)
 
         # Instantiate keypoint detector
 
@@ -161,18 +167,25 @@ if __name__ == "__main__":
 
     for crop, cs in zip(crops_ori, corners):
         marker = marker_from_corners(crop, cs, 32)
-
         # Grayscale and normalize
 
         markers.append(norm(cv2.cvtColor(marker, cv2.COLOR_BGR2GRAY)))
-
     if args.get_markers:
         for i in range(len(markers)):
-            cv2.imwrite(f"marker_{i}.png", markers[i] * 255.0)
+            cv2.imwrite(f"markers/marker_{i}.png", markers[i] * 255.0)
 
     # Get ids from markers
 
     decoder_out = np.round(decode_markers(np.array(markers)).numpy())
+
+    # print("Identified marker is")
+    # print()
+    # for row in range(len(decoder_out[0])):
+    #     for col in range(len(decoder_out[0][row])):
+    #         print(int(decoder_out[0][row][col][0]), end=" ")
+    #     print()
+    # print()
+
     ids, dists = zip(*[find_id(out) for out in decoder_out])
 
     # Visualize
@@ -211,3 +224,6 @@ if __name__ == "__main__":
         )
 
     cv2.imwrite(args.out_path, pic)
+
+
+# Command to run is python3 demo.py shadow\ aruco/00000.png out0.png -c -hm -m
