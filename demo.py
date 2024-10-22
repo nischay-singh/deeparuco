@@ -60,8 +60,6 @@ if __name__ == "__main__":
     )
     decoder = load_model(decoder_model)
 
-    print(detector_model, regressor_model, decoder_model)
-
     # Use graph execution for tf models
 
     @tf.function(reduce_retracing=True)
@@ -81,7 +79,7 @@ if __name__ == "__main__":
     detections = detector(pic, verbose=False, iou=0.5, conf=0.03)[0].cpu().boxes
 
     # Expanded boxes
-
+    
     xyxy = [
         [
             int(max(det[0] - (0.2 * (det[2] - det[0]) + 0.5), 0)),
@@ -93,6 +91,8 @@ if __name__ == "__main__":
             [int(val) for val in det.xyxy.cpu().numpy()[0]] for det in detections
         ]
     ]
+    print("XYXY is ")
+    print(xyxy)
 
     # Crop and normalize
 
